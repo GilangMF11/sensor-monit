@@ -1,0 +1,313 @@
+{
+  "info": {
+    "name": "Server Room Monitoring API",
+    "description": "API collection for Server Room Monitoring System.\n\nBase URL: http://localhost:3000/api/v1\n\nAuthentication: JWT Bearer token required for all endpoints except /health and /auth/*.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "apiUrl", "value": "{{baseUrl}}/api/v1" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health & Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+            "description": "No auth required. Returns API status."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is OK', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('OK');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "API Info",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{apiUrl}}/info", "host": ["{{apiUrl}}"], "path": ["info"] },
+            "description": "Returns available endpoints."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{apiUrl}}/auth/register", "host": ["{{apiUrl}}"], "path": ["auth", "register"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"admin\"\n}"
+            },
+            "description": "Create a new user account."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{apiUrl}}/auth/login", "host": ["{{apiUrl}}"], "path": ["auth", "login"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "description": "Get JWT token. Token auto-saved to collection variable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login successful', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.token).to.be.a('string');",
+                  "  pm.collectionVariables.set('token', json.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sensor Data",
+      "item": [
+        {
+          "name": "Submit Sensor Data",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{apiUrl}}/sensor-data", "host": ["{{apiUrl}}"], "path": ["sensor-data"] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"temperature\": 24.5,\n  \"humidity\": 55,\n  \"co_ppm\": 12,\n  \"lpg_ppm\": 200,\n  \"timestamp\": \"2025-01-15T10:30:45Z\"\n}"
+            },
+            "description": "ESP32 sends sensor data to backend."
+          }
+        },
+        {
+          "name": "Get Latest Sensor Data",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{apiUrl}}/sensor-data/latest", "host": ["{{apiUrl}}"], "path": ["sensor-data", "latest"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Returns most recent sensor reading."
+          }
+        },
+        {
+          "name": "Get Sensor History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{apiUrl}}/sensor-data/history?start_date=2025-01-01T00:00:00Z&end_date=2025-01-31T23:59:59Z&limit=100",
+              "host": ["{{apiUrl}}"],
+              "path": ["sensor-data", "history"],
+              "query": [
+                { "key": "start_date", "value": "2025-01-01T00:00:00Z" },
+                { "key": "end_date", "value": "2025-01-31T23:59:59Z" },
+                { "key": "limit", "value": "100" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Query sensor history with date range."
+          }
+        },
+        {
+          "name": "Get Sensor History (Aggregated)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{apiUrl}}/sensor-data/history?start_date=2025-01-01T00:00:00Z&end_date=2025-01-31T23:59:59Z&limit=100&interval=5min",
+              "host": ["{{apiUrl}}"],
+              "path": ["sensor-data", "history"],
+              "query": [
+                { "key": "start_date", "value": "2025-01-01T00:00:00Z" },
+                { "key": "end_date", "value": "2025-01-31T23:59:59Z" },
+                { "key": "limit", "value": "100" },
+                { "key": "interval", "value": "5min" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Aggregated data. interval: raw, 1min, 5min, 1hour"
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{apiUrl}}/sensor-data/statistics?start_date=2025-01-01T00:00:00Z&end_date=2025-01-31T23:59:59Z",
+              "host": ["{{apiUrl}}"],
+              "path": ["sensor-data", "statistics"],
+              "query": [
+                { "key": "start_date", "value": "2025-01-01T00:00:00Z" },
+                { "key": "end_date", "value": "2025-01-31T23:59:59Z" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Min/max/avg/stdev for all sensors in date range."
+          }
+        },
+        {
+          "name": "Export CSV",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{apiUrl}}/sensor-data/export/csv?start_date=2025-01-01T00:00:00Z&end_date=2025-01-31T23:59:59Z",
+              "host": ["{{apiUrl}}"],
+              "path": ["sensor-data", "export", "csv"],
+              "query": [
+                { "key": "start_date", "value": "2025-01-01T00:00:00Z" },
+                { "key": "end_date", "value": "2025-01-31T23:59:59Z" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Download sensor data as CSV file."
+          }
+        },
+        {
+          "name": "Export JSON",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{apiUrl}}/sensor-data/export/json?start_date=2025-01-01T00:00:00Z&end_date=2025-01-31T23:59:59Z",
+              "host": ["{{apiUrl}}"],
+              "path": ["sensor-data", "export", "json"],
+              "query": [
+                { "key": "start_date", "value": "2025-01-01T00:00:00Z" },
+                { "key": "end_date", "value": "2025-01-31T23:59:59Z" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Download sensor data as JSON file."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "item": [
+        {
+          "name": "Get All Alerts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{apiUrl}}/alerts?limit=20&severity=CRITICAL&resolved=false",
+              "host": ["{{apiUrl}}"],
+              "path": ["alerts"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "severity", "value": "CRITICAL" },
+                { "key": "resolved", "value": "false" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Filter by severity (CRITICAL/WARNING/INFO) and resolved (true/false)."
+          }
+        },
+        {
+          "name": "Get All Alerts (No Filter)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{apiUrl}}/alerts?limit=50&offset=0",
+              "host": ["{{apiUrl}}"],
+              "path": ["alerts"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "offset", "value": "0" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Resolve Alert",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{apiUrl}}/alerts/1/resolve", "host": ["{{apiUrl}}"], "path": ["alerts", "1", "resolve"] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Issue investigated and resolved\"\n}"
+            },
+            "description": "Replace :id with actual alert ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alert Configuration",
+      "item": [
+        {
+          "name": "Get Alert Config",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{apiUrl}}/alert-config", "host": ["{{apiUrl}}"], "path": ["alert-config"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Returns current thresholds for all sensors."
+          }
+        },
+        {
+          "name": "Update Alert Config",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{apiUrl}}/alert-config", "host": ["{{apiUrl}}"], "path": ["alert-config"] },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"temperature\": {\n    \"warning_threshold\": 30,\n    \"critical_threshold\": 38\n  },\n  \"humidity\": {\n    \"warning_low\": 35,\n    \"warning_high\": 75\n  }\n}"
+            },
+            "description": "Partial update — only send fields to change."
+          }
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "System Status",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{apiUrl}}/system/status", "host": ["{{apiUrl}}"], "path": ["system", "status"] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Returns API, database, and ESP32 device status."
+          }
+        }
+      ]
+    }
+  ]
+}
